@@ -3,7 +3,7 @@
 (c) Benoit Cyrulik
 2019 - MIT License
 https://github.com/bentoweb/wp-getimageobj
-v0.9
+v0.9.1
 */
 
 
@@ -117,7 +117,12 @@ function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
       foreach ($iconfile->getElementsByTagName('title') as $titletag) {
         $titletag->parentNode->removeChild($titletag);
       }
+      // security
+      foreach ($iconfile->getElementsByTagName('script') as $poisontag) {
+        $poisontag->parentNode->removeChild($poisontag);
+      }
       return $iconfile->saveHTML($iconfile->getElementsByTagName('svg')[0]);
+      // todo : duplicate SVG file to folder "images"
 
     } else if ($extension=='png') {
       $ext = '.png';
