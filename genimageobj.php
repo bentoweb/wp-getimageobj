@@ -3,7 +3,7 @@
 (c) Benoit Cyrulik
 2019 - MIT License
 https://github.com/bentoweb/wp-getimageobj
-v0.9.1
+v0.9.2
 */
 
 
