@@ -1,5 +1,5 @@
 # wp-getimageobj
-## v0.9.1
+## v0.9.2
 ## WordPress Custom function : generate images from medias and posts
 
 `$img_obj = getImageObj($id,$imgW,$imgH,$qual,$defaultimg);`
