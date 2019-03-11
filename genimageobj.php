@@ -25,6 +25,20 @@ function basepath() {
 
 
 
+
+/*
+COMPOSER :
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packagist.org"
+    }
+  ],
+  "require": {
+    "tinify/tinify": "^1.5.2"
+  },
+*/
+
 //----------------- Crée ou récupère une image formatée à la demande
 /*
     Exemple :
@@ -42,6 +56,12 @@ function basepath() {
     $qual : Qualité de compression JPG
     $default : Si l'image n'existe pas, utiliser une l'image par défaut (true/false)
 */
+try {
+  \Tinify\setKey('Tinify_API_KEY');
+} catch() {
+  //-
+}
+
 function getImageObj($idPost,$imgW=0,$imgH=0,$qual=90,$default=false) {
   /*
       Si c'est une image, retourne un objet post media + l'url d'une image générée dans '->scr'
@@ -169,12 +189,13 @@ function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
       }
     }
 
-    $filename = $seotitle.'-'.$largeurFinale.'-'.$hauteurFinale.$qualtxt.'-'.$idImage.$ext;
+    $filename = $seotitle.'-'.$largeurFinale.'-'.$hauteurFinale.$qualtxt.'-'.$idImage;
+    $filenameext = $seotitle.'-'.$largeurFinale.'-'.$hauteurFinale.$qualtxt.'-'.$idImage.$ext;
     $abspath = basepath();
     $imgpath = str_replace('//','/',$abspath.'/images/');
 
-    if(!file_exists($imgpath.$filename)) {
-      if(!file_exists($imgpath.utf8_decode($filename))) {
+    if(!file_exists($imgpath.$filenameext)) {
+      if(!file_exists($imgpath.utf8_decode($filenameext))) {
 
         if (!file_exists($abspath.'/images')) {
             mkdir($abspath.'/images', 0755, true);
@@ -213,11 +234,12 @@ function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
             imagecopyresampled($nouvelleImage, $source, -$decalageX, -$decalageY, 0, 0, $largeurImgSmall, $hauteurImgSmall, $largeurImgBig, $hauteurImgBig);
 
             if ($extension=='png') {
-              imagepng($nouvelleImage,$abspath.'/images/'.$filename);
+              imagepng($nouvelleImage,$abspath.'/images/'.$filenameext);
             } else {
-              imagejpeg($nouvelleImage,$abspath.'/images/'.$filename, $qual);
+              imagejpeg($nouvelleImage,$abspath.'/images/'.$filenameext, $qual);
             }
-            return $domain.'/images/'.$filename;
+            // return $domain.'/images/'.$filenameext;
+            return optimizeImgObj($filename,$ext);
           } else {
             return "Format d'image invalide";
           }
@@ -226,13 +248,37 @@ function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
         }
 
       } else {
-        return $domain.'/images/'.utf8_decode($filename);
+        // return $domain.'/images/'.utf8_decode($filenameext);
+        return optimizeImgObj(utf8_decode($filename),$ext);
       }
     } else {
-      return $domain.'/images/'.$filename;
+      // return $domain.'/images/'.$filenameext;
+      return optimizeImgObj($filename,$ext);
     }
 
   }
+}
+
+
+function optimizeImgObj($file='optimizeImgObj empty $file',$ext='optimizeImgObj empty $ext') {
+  $abspath = basepath();
+  $domain = baseurl( get_bloginfo('url') );
+
+  if (file_exists($abspath.'/images/'.$file.'-o'.$ext)) {
+    return $domain.'/images/'.$file.'-o'.$ext;
+
+  } else {
+    try {
+      $source = \Tinify\fromFile($abspath.'/images/'.$file.$ext);
+      $source->toFile($abspath.'/images/'.$file.'-o'.$ext);
+      return $domain.'/images/'.$file.'-o'.$ext;
+
+    } catch(Exception $e) {
+      return $domain.'/images/'.$file.$ext;
+      
+    }
+  }
+
 }
 
 
