@@ -3,27 +3,8 @@
 (c) Benoit Cyrulik
 2019 - MIT License
 https://github.com/bentoweb/wp-getimageobj
-v0.9.2
+v0.9.3
 */
-
-
-
-
-function rw_remove_root ($url) {
-  $result = parse_url($url);
-  return $result['path'];
-}
-
-function baseurl($url) {
-  $result = parse_url($url);
-  return $result['scheme']."://".$result['host'];
-}
-
-function basepath() {
-  return str_replace($_SERVER["SCRIPT_NAME"],'',$_SERVER["SCRIPT_FILENAME"]);
-}
-
-
 
 
 /*
@@ -39,12 +20,15 @@ COMPOSER :
   },
 */
 
+
 //----------------- Crée ou récupère une image formatée à la demande
 /*
     Exemple :
-    $monImageUrl = genImageFromPost(7,800,600,60);
+    $monImageUrl = genImageFromPost(7,800,600,60,true);
+    Retourne l'url d'une image (générée si besoin) à partir du média dont l'ID est 7, ou de l'image à la une du post ayant l'ID 7, en 800px de largeur, 600px de largeur (croppée si besoin), avec une qualité jpg de 60%. Si l'identifiant demandé n'existe pas (ou étant un post n'ayant pas d'image à la une), une image par défaut provenant de picsum.photos est utilisée.
+    Exemples :
     Si l'image à la une du post 7 est le fichier "Mon_Image.jpg" ayant l'ID 35,
-    le fichier généré sera "mon-image-800-600-60-35.jpg".
+    le fichier généré sera "/images/mon-image-800-600-60-35.jpg".
     Par contre, si dans Médias le titre de l'image est "Mon Titre SEO",
     le nom du fichier sera "mon-titre-seo-800-600-60-35.jpg".
     Si aucune taille n'est précisée, l'image sera sortie à sa taille d'origine.
@@ -54,13 +38,20 @@ COMPOSER :
     $imgW : Largeur contrainte (laisser 0 pour ne pas contraindre)
     $imgH : Hauteur contrainte (laisser 0 pour ne pas contraindre)
     $qual : Qualité de compression JPG
-    $default : Si l'image n'existe pas, utiliser une l'image par défaut (true/false)
+    $default : Si l'ID n'est pas un média ou si c'est un post n'ayant pas d'image à la une :
+    - false : retourne false.
+    - true : Retourne une image aléatoire depuis picsum.photos
+    - [id de média] : retourne le média spécifié s'il existe, ou false.
+
 */
+
 try {
   \Tinify\setKey('Tinify_API_KEY');
 } catch() {
   //-
 }
+
+
 
 function getImageObj($idPost,$imgW=0,$imgH=0,$qual=90,$default=false) {
   /*
@@ -69,6 +60,7 @@ function getImageObj($idPost,$imgW=0,$imgH=0,$qual=90,$default=false) {
       Si c'est un SVG, retourne un objet post media + la source du svg dans '->scr'
   */
   $thispost = get_post($idPost);
+  // pr($thispost);
   if (is_object($thispost)) {
     if ($thispost->post_type=='attachment') {
       $thispost->src = genImage($thispost->ID,$imgW,$imgH,$qual,$default);
@@ -83,8 +75,18 @@ function getImageObj($idPost,$imgW=0,$imgH=0,$qual=90,$default=false) {
         if ($default==false) {
           return false;
         } else {
-          $imgpost = get_post($post_thumbnail_id);
-          $imgpost->src = picsum($imgW,$imgH);
+          if (is_int($default)) {
+            $imgpost = get_post($default);
+            if (is_object($imgpost)) {
+              $imgpost->src = genImage($imgpost->ID,$imgW,$imgH,$qual,$default);
+              return $imgpost;
+            } else {
+              return false;
+            }
+          } else {
+            $imgpost = get_post($post_thumbnail_id);
+            $imgpost->src = picsum($imgW,$imgH);
+          }
           return $imgpost;
         }
       }
@@ -95,19 +97,15 @@ function getImageObj($idPost,$imgW=0,$imgH=0,$qual=90,$default=false) {
   }
 }
 
-function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
 
-  $id_defaut_image = 0;
+
+function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
 
   if (!empty($idImage)){
 
     $attImage = wp_get_attachment_image_src( $idImage, 'full' );
     if (empty($attImage)) {
-      if ($default==true) {
-        $attImage = wp_get_attachment_image_src( $id_defaut_image, 'full' );
-      } else {
-        return false;
-      }
+      return false;
     }
 
     if (empty($imgW) && empty($imgH)) {
@@ -260,6 +258,7 @@ function genImage($idImage,$imgW=0,$imgH=0,$qual=90,$default=false) {
 }
 
 
+
 function optimizeImgObj($file='optimizeImgObj empty $file',$ext='optimizeImgObj empty $ext') {
   $abspath = basepath();
   $domain = baseurl( get_bloginfo('url') );
@@ -268,6 +267,7 @@ function optimizeImgObj($file='optimizeImgObj empty $file',$ext='optimizeImgObj 
     return $domain.'/images/'.$file.'-o'.$ext;
 
   } else {
+
     try {
       $source = \Tinify\fromFile($abspath.'/images/'.$file.$ext);
       $source->toFile($abspath.'/images/'.$file.'-o'.$ext);
@@ -277,16 +277,14 @@ function optimizeImgObj($file='optimizeImgObj empty $file',$ext='optimizeImgObj 
       return $domain.'/images/'.$file.$ext;
       
     }
+
   }
 
 }
 
 
 
-
-
 function picsum($width=false,$height=false) {
-  // update with https://picsum.photos/list
   if (!$width) {
     $width = '';
     if (!$height) { $height = '200'; }
@@ -298,5 +296,19 @@ function picsum($width=false,$height=false) {
   } else {
     $height = '/'.$height;
   }
-  return 'https://picsum.photos'.$width.$height.'?image='.rand(1,1200);
+  return 'https://picsum.photos/'.$width.$height.'/?random';
+}
+
+function rw_remove_root ($url) {
+  $result = parse_url($url);
+  return $result['path'];
+}
+
+function baseurl($url) {
+  $result = parse_url($url);
+  return $result['scheme']."://".$result['host'];
+}
+
+function basepath() {
+  return str_replace($_SERVER["SCRIPT_NAME"],'',$_SERVER["SCRIPT_FILENAME"]);
 }
