@@ -20,6 +20,12 @@ COMPOSER :
   },
 */
 
+try {
+  \Tinify\setKey('Tinify_API_KEY');
+} catch() {
+  //-
+}
+
 
 //----------------- Crée ou récupère une image formatée à la demande
 /*
@@ -44,12 +50,6 @@ COMPOSER :
     - [id de média] : retourne le média spécifié s'il existe, ou false.
 
 */
-
-try {
-  \Tinify\setKey('Tinify_API_KEY');
-} catch() {
-  //-
-}
 
 
 
